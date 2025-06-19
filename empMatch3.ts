@@ -95,6 +95,7 @@ class NewSheet {
 
   build() {
     this.sheet.getRangeByIndexes(0, 0, this.data.length, this.data[0].length).setValues(this.data);
+    this.sheet.getUsedRange().getFormat().autofitColumns();
   }
 
   showData() {

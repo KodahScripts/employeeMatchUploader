@@ -69,17 +69,17 @@ class BeneReport extends Report {
     this.debitAmountCol = this.getColumn("debitamount");
     this.creditAmountCol = this.getColumn("creditamount");
     this.acctIDCol = this.getColumn("glaccountno");
-    this.acctNameCol = this.getColumn("coderiptionall");
+    this.acctNameCol = this.getColumn("codedescriptionall");
     this.payDate = Number(this.data[0][this.getColumn("paydate")]);
   }
 
   getAllEmployees() {
     return this.data.map(row => {
-      return { 
+      return {
         name: String(row[this.empNameCol]),
         ukgID: Number(row[this.ukgEmpIDCol]),
         gl: String(row[this.acctIDCol]),
-        desc: String(row[this.acctNameCol]).slice(0,24),
+        desc: String(row[this.acctNameCol]),
         amount: Number(row[this.debitAmountCol]) === 0 ? -Number(row[this.creditAmountCol]) : Number(row[this.debitAmountCol])
       }
     });
@@ -140,7 +140,7 @@ function getSheets(workbook: ExcelScript.Workbook) {
 }
 
 function main(workbook: ExcelScript.Workbook) {
-  const sheets = getSheets(workbook);
+  getSheets(workbook);
   const rosterReport = workbook.getWorksheet("ROSTER").getUsedRange().getValues();
   const beneReport = workbook.getWorksheet("REPORT").getUsedRange().getValues();
   const roster = new RosterReport(rosterReport);
@@ -150,7 +150,7 @@ function main(workbook: ExcelScript.Workbook) {
 
   all_bene_employees.forEach(row => {
     all_roster_employees.forEach(emp => {
-      if(emp.compareNames(row.name)) {
+      if (emp.compareNames(row.name)) {
         emp.ukgId = row.ukgID;
         emp.amounts.push({ account: row.gl, description: row.desc, amount: row.amount });
       }
@@ -160,10 +160,10 @@ function main(workbook: ExcelScript.Workbook) {
 
   const matchedEmployees = all_roster_employees.filter(emp => emp.amounts.length > 0);
   const uploadSheetHeader = ["Reference #", "G/L Account", "Amount", "Control #", "Description"];
-  const uploadSheetRows: Array<string|number>[] = [];
+  const uploadSheetRows: Array<string | number>[] = [];
   matchedEmployees.forEach(emp => {
     emp.amounts.forEach(acct => {
-      uploadSheetRows.push([dateToRef(benes.payDate), acct.account, acct.amount, emp.id, acct.description]);
+      uploadSheetRows.push([dateToRef(benes.payDate), acct.account, acct.amount, emp.id, acct.description.slice(0,24)]);
     });
   });
   const uploadSheetData = [uploadSheetHeader, ...uploadSheetRows];

@@ -86,6 +86,22 @@ class BeneReport extends Report {
   }
 }
 
+class NewSheet {
+  public sheet: ExcelScript.Worksheet;
+  constructor(workbook: ExcelScript.Workbook, sheetName: string, private data: Array<string | number>[]) {
+    this.sheet = workbook.addWorksheet(sheetName);
+    this.data = data;
+  }
+
+  build() {
+    this.sheet.getRangeByIndexes(0, 0, this.data.length, this.data[0].length).setValues(this.data);
+  }
+
+  showData() {
+    console.log(this.data);
+  }
+}
+
 function cleanString(text: string): string {
   const alphaonly = text.replace(/\W/ig, "");
   const finalText = alphaonly.replace(/\s/g, "");
@@ -140,28 +156,26 @@ function main(workbook: ExcelScript.Workbook) {
     });
   });
 
+
   const matchedEmployees = all_roster_employees.filter(emp => emp.amounts.length > 0);
-  const noMatch = all_roster_employees.filter(emp => emp.amounts.length === 0);
-
-  const uploadSheet = workbook.addWorksheet("UPLOAD");
-  const noMatchSheet = workbook.addWorksheet("No Match");
-
-  uploadSheet.getRange("A1:E1").setValues([["Reference #", "G/L Account", "Amount", "Control #", "Description"]]);
-  noMatchSheet.getRange("A1:B1").setValues([["Name", "Reynolds #"]]);
-
-  matchedEmployees.forEach((emp, index) => {
-    const row = index + 2;
-    emp.amounts.forEach(item => {
-      uploadSheet.getRange(`A${row}:E${row}`).setValues([[dateToRef(benes.payDate), item.account, item.amount, emp.id, item.description]]);
+  const uploadSheetHeader = ["Reference #", "G/L Account", "Amount", "Control #", "Description"];
+  const uploadSheetRows: Array<string|number>[] = [];
+  matchedEmployees.forEach(emp => {
+    emp.amounts.forEach(acct => {
+      uploadSheetRows.push([dateToRef(benes.payDate), acct.account, acct.amount, emp.id, acct.description]);
     });
   });
+  const uploadSheetData = [uploadSheetHeader, ...uploadSheetRows];
+  const uploadSheet = new NewSheet(workbook, "UPLOAD", uploadSheetData);
+  uploadSheet.build();
 
-  noMatch.forEach((emp, index) => {
-    const row = index + 2;
+  const noMatch = all_roster_employees.filter(emp => emp.amounts.length === 0);
+  const noMatchSheetHeader = ["Name", "Reynolds #"];
+  const noMatchRows = noMatch.map(emp => {
     const name = [emp.firstName, emp.lastName].join(' ');
-    noMatchSheet.getRange(`A${row}:B${row}`).setValues([[name, emp.id]]);
+    return [name, emp.id];
   });
-
-  uploadSheet.getUsedRange().getFormat().autofitColumns();
-  noMatchSheet.getUsedRange().getFormat().autofitColumns();
+  const noMatchSheetData = [noMatchSheetHeader, ...noMatchRows];
+  const noMatchSheet = new NewSheet(workbook, "No Match", noMatchSheetData);
+  noMatchSheet.build();
 }

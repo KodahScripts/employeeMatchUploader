@@ -69,7 +69,7 @@ class BeneReport extends Report {
     this.debitAmountCol = this.getColumn("debitamount");
     this.creditAmountCol = this.getColumn("creditamount");
     this.acctIDCol = this.getColumn("glaccountno");
-    this.acctNameCol = this.getColumn("codedescriptionall");
+    this.acctNameCol = this.getColumn("coderiptionall");
     this.payDate = Number(this.data[0][this.getColumn("paydate")]);
   }
 
@@ -79,7 +79,7 @@ class BeneReport extends Report {
         name: String(row[this.empNameCol]),
         ukgID: Number(row[this.ukgEmpIDCol]),
         gl: String(row[this.acctIDCol]),
-        desc: String(row[this.acctNameCol]),
+        desc: String(row[this.acctNameCol]).slice(0,24),
         amount: Number(row[this.debitAmountCol]) === 0 ? -Number(row[this.creditAmountCol]) : Number(row[this.debitAmountCol])
       }
     });

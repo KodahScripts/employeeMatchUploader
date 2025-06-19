@@ -163,7 +163,11 @@ function main(workbook: ExcelScript.Workbook) {
   const uploadSheetRows: Array<string | number>[] = [];
   matchedEmployees.forEach(emp => {
     emp.amounts.forEach(acct => {
-      uploadSheetRows.push([dateToRef(benes.payDate), acct.account, acct.amount, emp.id, acct.description.slice(0,24)]);
+      if(Number(acct.account)) {
+        uploadSheetRows.push([dateToRef(benes.payDate), `=XLOOKUP(${acct.account},Mapping!A:A,Mapping!C:C)`, acct.amount, emp.id, acct.description.slice(0,24)]);
+      } else {
+        uploadSheetRows.push([dateToRef(benes.payDate), `=XLOOKUP("${acct.account}",Mapping!A:A,Mapping!C:C)`, acct.amount, emp.id, acct.description.slice(0, 24)]);
+      }
     });
   });
   const uploadSheetData = [uploadSheetHeader, ...uploadSheetRows];

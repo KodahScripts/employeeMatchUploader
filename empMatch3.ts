@@ -8,10 +8,11 @@ class Employee {
   public id: number;
   public ukgId: number;
   public amounts: Benefit[];
-
+  public found: boolean;
   constructor(employeeID: number, public firstName: string, public lastName: string) {
     this.id = employeeID;
     this.amounts = [];
+    this.found = false;
   }
 
   compareNames(name: string): boolean {
@@ -80,7 +81,8 @@ class BeneReport extends Report {
         ukgID: Number(row[this.ukgEmpIDCol]),
         gl: String(row[this.acctIDCol]),
         desc: String(row[this.acctNameCol]),
-        amount: Number(row[this.debitAmountCol]) === 0 ? -Number(row[this.creditAmountCol]) : Number(row[this.debitAmountCol])
+        amount: Number(row[this.debitAmountCol]) === 0 ? -Number(row[this.creditAmountCol]) : Number(row[this.debitAmountCol]),
+        found: false
       }
     });
   }
@@ -148,37 +150,36 @@ function main(workbook: ExcelScript.Workbook) {
   const all_roster_employees = roster.getAllEmployees();
   const all_bene_employees = benes.getAllEmployees();
 
-  all_bene_employees.forEach(row => {
-    all_roster_employees.forEach(emp => {
-      if (emp.compareNames(row.name)) {
+  all_roster_employees.forEach(emp => {
+    all_bene_employees.forEach((row, index) => {
+      const rowNumber = index + 2;
+      if(emp.compareNames(row.name)) {
         emp.ukgId = row.ukgID;
         emp.amounts.push({ account: row.gl, description: row.desc, amount: row.amount });
+        emp.found = true;
+        row.found = true;
       }
     });
   });
 
-
   const matchedEmployees = all_roster_employees.filter(emp => emp.amounts.length > 0);
-  const uploadSheetHeader = ["Reference #", "G/L Account", "Amount", "Control #", "Description"];
+  const uploadSheetHeader = ["Reference #", "G/L Account", "GL Name", "Amount", "Control #", "Employee Name", "Description"];
   const uploadSheetRows: Array<string | number>[] = [];
   matchedEmployees.forEach(emp => {
     emp.amounts.forEach(acct => {
-      if(Number(acct.account)) {
-        uploadSheetRows.push([dateToRef(benes.payDate), `=XLOOKUP(${acct.account},Mapping!A:A,Mapping!C:C)`, acct.amount, emp.id, acct.description.slice(0,24)]);
-      } else {
-        uploadSheetRows.push([dateToRef(benes.payDate), `=XLOOKUP("${acct.account}",Mapping!A:A,Mapping!C:C)`, acct.amount, emp.id, acct.description.slice(0, 24)]);
-      }
+      uploadSheetRows.push([dateToRef(benes.payDate), `=XLOOKUP("${acct.account}",Mapping!A:A,Mapping!C:C)`, `=XLOOKUP("${acct.account}",Mapping!A:A,Mapping!B:B)`, acct.amount, emp.id, [emp.firstName, emp.lastName].join(' ').toUpperCase(), acct.description.slice(0, 24)]);
     });
   });
   const uploadSheetData = [uploadSheetHeader, ...uploadSheetRows];
   const uploadSheet = new NewSheet(workbook, "UPLOAD", uploadSheetData);
   uploadSheet.build();
 
-  const noMatch = all_roster_employees.filter(emp => emp.amounts.length === 0);
+  const noMatch = all_bene_employees.filter(emp => !emp.found);
   const noMatchSheetHeader = ["Name", "Reynolds #"];
   const noMatchRows = noMatch.map(emp => {
-    const name = [emp.firstName, emp.lastName].join(' ');
-    return [name, emp.id];
+    const splitname = emp.name.split(",");
+    const name = [splitname[1], splitname[0]].join(' ');
+    return [name, emp.amount];
   });
   const noMatchSheetData = [noMatchSheetHeader, ...noMatchRows];
   const noMatchSheet = new NewSheet(workbook, "No Match", noMatchSheetData);
